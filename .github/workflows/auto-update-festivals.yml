@@ -1,0 +1,93 @@
+name: Auto Update Festivals
+
+on:
+  # 임시 테스트용 스케줄
+  # - GitHub Actions cron은 "최소 5분 단위"라 2분마다 실행은 불가합니다.
+  # - 확인용으로 5분마다 실행되도록 설정합니다. (추후 주 1회로 되돌리세요)
+  schedule:
+    - cron: '*/5 * * * *'
+  # 수동 실행도 가능
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-update-festivals
+  cancel-in-progress: true
+
+jobs:
+  update-and-deploy:
+    name: Update Festivals, Build and Commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Debug tick (counter)
+        run: |
+          echo "✅ tick"
+          echo "run_number=${GITHUB_RUN_NUMBER}"
+          echo "run_id=${GITHUB_RUN_ID}"
+          echo "utc_now=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Puppeteer browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-puppeteer-
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Update festival data
+        run: node scripts/updateFestivals.js
+
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "축제 데이터가 업데이트되었습니다."
+            git status
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "변경사항이 없습니다."
+          fi
+
+      - name: Build project
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: npm run build
+
+      - name: Commit and push changes
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add src/data/festivals.js
+          git commit -m "chore: 자동 업데이트 - 축제 데이터 갱신 [skip ci]"
+          git push
+
+      - name: Summary - Updated
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: |
+          echo "✅ 축제 데이터가 성공적으로 업데이트되고 커밋되었습니다!"
+          echo "📅 업데이트 시간: $(date)"
+
+      - name: Summary - No Changes
+        if: steps.verify-changed-files.outputs.changed == 'false'
+        run: |
+          echo "ℹ️  변경사항이 없어 업데이트를 건너뛰었습니다."

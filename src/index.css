@@ -1,0 +1,54 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Readability-first, festival vibe */
+  --page: #fff7ed; /* warm paper */
+  --page-2: #fff1f2; /* soft pink */
+  --surface: rgba(255, 255, 255, 0.96);
+  --surface-2: rgba(255, 255, 255, 0.88);
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.64);
+  --border: rgba(15, 23, 42, 0.10);
+  --shadow-sm: 0 10px 26px rgba(2, 6, 23, 0.08);
+  --shadow-md: 0 18px 54px rgba(2, 6, 23, 0.12);
+  --radius: 16px;
+  --radius-sm: 12px;
+
+  /* Festival palette (warm + lively) */
+  --accent-1: #fb7185; /* rose */
+  --accent-2: #f59e0b; /* amber */
+  --accent-3: #22c55e; /* green */
+  --accent-4: #38bdf8; /* sky */
+  --ring: rgba(251, 113, 133, 0.26);
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.55;
+  background:
+    /* subtle confetti dots */
+    radial-gradient(6px 6px at 12% 18%, rgba(251, 113, 133, 0.25) 40%, transparent 41%),
+    radial-gradient(6px 6px at 76% 24%, rgba(56, 189, 248, 0.22) 40%, transparent 41%),
+    radial-gradient(6px 6px at 62% 78%, rgba(245, 158, 11, 0.22) 40%, transparent 41%),
+    radial-gradient(6px 6px at 18% 72%, rgba(34, 197, 94, 0.18) 40%, transparent 41%),
+    radial-gradient(1000px 700px at 10% 10%, rgba(251, 113, 133, 0.18), transparent 60%),
+    radial-gradient(900px 650px at 90% 20%, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(900px 650px at 50% 100%, rgba(245, 158, 11, 0.12), transparent 55%),
+    linear-gradient(180deg, var(--page) 0%, var(--page-2) 100%);
+  color: var(--text);
+}
+
+::selection {
+  background: rgba(109, 94, 252, 0.25);
+}
+
+#root {
+  min-height: 100vh;
+}

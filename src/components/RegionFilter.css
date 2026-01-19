@@ -1,0 +1,39 @@
+.region-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-label {
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 0.95rem;
+}
+
+.region-select {
+  padding: 10px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 12px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 150px;
+}
+
+.region-select:hover {
+  border-color: rgba(251, 113, 133, 0.55);
+}
+
+.region-select:focus {
+  outline: none;
+  border-color: rgba(251, 113, 133, 0.75);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+@media (max-width: 768px) {
+  .region-select {
+    width: 100%;
+  }
+}
