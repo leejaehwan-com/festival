@@ -34,8 +34,10 @@ npm run build
 
 - `https://www.mcst.go.kr/site/s_culture/festival/festivalList.jsp?pMenuCD=&pCurrentPage=1&pSearchType=&pSearchWord=&pSeq=&pSido=&pOrder=&pPeriod=&fromDt=&toDt=`
 
-만약 위 URL 구조가 변경되면, `scripts/updateFestivals.js` 상단의 아래 상수만 수정하면 됩니다:
+만약 위 URL 구조가 변경되면, 스크래퍼 파일인 `tools/mcst-scraper/updateFestivals.js` 상단의 아래 상수만 수정하면 됩니다:
 
 - `MCST_BASE`
 - `MCST_LIST_URL`
 - `MCST_DETAIL_URL`
+
+> 참고: `scripts/updateFestivals.js`는 스크래퍼를 실행하는 **래퍼(wrapper)** 입니다.

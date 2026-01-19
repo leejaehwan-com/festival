@@ -42,19 +42,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Cache Puppeteer browser
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/puppeteer
-          key: ${{ runner.os }}-puppeteer-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-puppeteer-
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
       - name: Update festival data
-        run: node scripts/updateFestivals.js
+        run: |
+          npm ci --prefix tools/mcst-scraper --no-audit --no-fund
+          node scripts/updateFestivals.js
 
       - name: Check for changes
         id: verify-changed-files
@@ -67,6 +58,10 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "변경사항이 없습니다."
           fi
+
+      - name: Install app dependencies
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: npm ci --no-audit --no-fund
 
       - name: Build project
         if: steps.verify-changed-files.outputs.changed == 'true'
