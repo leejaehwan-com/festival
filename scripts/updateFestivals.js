@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -85,79 +84,81 @@ const escapeJsString = (value) => {
     .replace(/'/g, "\\'");
 };
 
-async function fetchFestivalListWithPuppeteer() {
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+async function fetchFestivalListWithFetch() {
+  console.log('📡 MCST 축제 목록 페이지에서 데이터 수집 중...');
+  console.log(`   URL: ${MCST_LIST_URL(1)}`);
 
-  try {
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  };
 
-    await page.goto(MCST_LIST_URL(1), { waitUntil: 'networkidle2', timeout: 30000 });
-    await sleep(1200);
+  const res1 = await fetch(MCST_LIST_URL(1), { headers });
+  if (!res1.ok) throw new Error(`list fetch failed: ${res1.status}`);
+  const html1 = await res1.text();
+  const $1 = load(html1);
 
-    const totalPages = await page.evaluate(() => {
-      const whole = document.querySelector('.whole-count')?.textContent || '';
-      const m = whole.match(/\[(\d+)\s*\/\s*(\d+)\s*쪽\]/);
-      if (m) return parseInt(m[2], 10);
-
-      const nums = Array.from(document.querySelectorAll('a.page-link'))
-        .map((a) => parseInt((a.textContent || '').trim(), 10))
-        .filter((n) => Number.isFinite(n));
-      return nums.length ? Math.max(...nums) : 1;
-    });
-
-    console.log(`📚 총 페이지: ${totalPages}쪽`);
-
-    const list = [];
-
-    for (let p = 1; p <= totalPages; p++) {
-      if (p !== 1) {
-        await page.goto(MCST_LIST_URL(p), { waitUntil: 'networkidle2', timeout: 30000 });
-        await sleep(1200);
-      }
-
-      console.log(`📄 ${p}페이지 수집 중...`);
-
-      const pageItems = await page.evaluate(() => {
-        const items = [];
-        const lis = document.querySelectorAll('ul.thum-list > li');
-        lis.forEach((li) => {
-          const a = li.querySelector('a.go');
-          if (!a) return;
-
-          const name = li.querySelector('.text.festival .sub-tit')?.textContent?.trim() || '';
-          const periodText =
-            Array.from(li.querySelectorAll('.text.festival .list li')).find((x) =>
-              (x.textContent || '').includes('기간'),
-            )?.textContent || '';
-          const placeText =
-            Array.from(li.querySelectorAll('.text.festival .list li')).find((x) =>
-              (x.textContent || '').includes('장소'),
-            )?.textContent || '';
-          const href = a.getAttribute('href') || '';
-
-          items.push({
-            name,
-            periodText,
-            placeText,
-            href,
-          });
-        });
-        return items;
-      });
-
-      console.log(`✅ ${pageItems.length}개 축제 수집 완료`);
-      list.push(...pageItems);
-      await sleep(600);
-    }
-
-    return list;
-  } finally {
-    await browser.close();
+  const whole = ($1('.whole-count').first().text() || '').trim();
+  let totalPages = 1;
+  const m = whole.match(/\[(\d+)\s*\/\s*(\d+)\s*쪽\]/);
+  if (m?.[2]) {
+    totalPages = parseInt(m[2], 10);
+  } else {
+    const nums = $1('a.page-link')
+      .toArray()
+      .map((el) => parseInt($1(el).text().trim(), 10))
+      .filter((n) => Number.isFinite(n));
+    totalPages = nums.length ? Math.max(...nums) : 1;
   }
+
+  console.log(`📚 총 페이지: ${totalPages}쪽`);
+
+  const list = [];
+
+  const parsePage = (html) => {
+    const $ = load(html);
+    const items = [];
+    $('ul.thum-list > li').each((_, li) => {
+      const a = $(li).find('a.go').first();
+      if (!a.length) return;
+
+      const name = $(li).find('.text.festival .sub-tit').first().text().trim();
+
+      const lis = $(li).find('.text.festival .list li').toArray();
+      const periodRaw =
+        lis.map((x) => $(x).text().trim()).find((t) => t.includes('기간')) || '';
+      const placeRaw =
+        lis.map((x) => $(x).text().trim()).find((t) => t.includes('장소')) || '';
+
+      const periodText = periodRaw.replace(/^기간\s*:\s*/, '').trim();
+      const placeText = placeRaw.replace(/^장소\s*:\s*/, '').trim();
+      const href = (a.attr('href') || '').trim();
+
+      items.push({ name, periodText, placeText, href });
+    });
+    return items;
+  };
+
+  // page 1
+  console.log('📄 1페이지 수집 중...');
+  const page1Items = parsePage(html1);
+  console.log(`✅ ${page1Items.length}개 축제 수집 완료`);
+  list.push(...page1Items);
+
+  for (let p = 2; p <= totalPages; p++) {
+    console.log(`📄 ${p}페이지 수집 중...`);
+    const res = await fetch(MCST_LIST_URL(p), { headers });
+    if (!res.ok) {
+      console.log(`⚠️  ${p}페이지 요청 실패: ${res.status}`);
+      break;
+    }
+    const html = await res.text();
+    const pageItems = parsePage(html);
+    console.log(`✅ ${pageItems.length}개 축제 수집 완료`);
+    list.push(...pageItems);
+    await sleep(400);
+  }
+
+  return list;
 }
 
 async function fetchFestivalDetail(detailUrl) {
@@ -269,7 +270,7 @@ async function updateFestivals() {
   console.log(`📅 실행 시간: ${new Date().toLocaleString('ko-KR')}`);
   console.log(`📌 목록 URL: ${MCST_LIST_URL(1)}`);
 
-  const listItems = await fetchFestivalListWithPuppeteer();
+  const listItems = await fetchFestivalListWithFetch();
   const unique = [];
   const seen = new Set();
   for (const item of listItems) {
